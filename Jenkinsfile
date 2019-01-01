@@ -1,5 +1,7 @@
 pipeline {
-  agent any
+  agent {
+    label 'jenkins-python'
+  }
   environment {
     ORG = 'tinabear'
     APP_NAME = 'python-http'
