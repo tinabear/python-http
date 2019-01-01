@@ -18,12 +18,14 @@ pipeline {
         HELM_RELEASE = "$PREVIEW_NAMESPACE".toLowerCase()
       }
       steps {
-        sh "python -m unittest"
-        sh "export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml"
-        sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
-        dir('./charts/preview') {
-          sh "make preview"
-          sh "jx preview --app $APP_NAME --dir ../.."
+        container('python') {
+          sh "python -m unittest"
+          sh "export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml"
+          sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
+          dir('./charts/preview') {
+            sh "make preview"
+            sh "jx preview --app $APP_NAME --dir ../.."
+          }
         }
       }
     }
@@ -32,14 +34,16 @@ pipeline {
         branch 'master'
       }
       steps {
-        git 'https://github.com/tinabear/python-http.git'
+        container('python') {
+          git 'https://github.com/tinabear/python-http.git'
 
-        // so we can retrieve the version in later steps
-        sh "echo \$(jx-release-version) > VERSION"
-        sh "jx step tag --version \$(cat VERSION)"
-        sh "python -m unittest"
-        sh "export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml"
-        sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
+          // so we can retrieve the version in later steps
+          sh "echo \$(jx-release-version) > VERSION"
+          sh "jx step tag --version \$(cat VERSION)"
+          sh "python -m unittest"
+          sh "export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml"
+          sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
+        }
       }
     }
     stage('Promote to Environments') {
@@ -47,14 +51,16 @@ pipeline {
         branch 'master'
       }
       steps {
-        dir('./charts/python-http') {
-          sh "jx step changelog --version v\$(cat ../../VERSION)"
+        container('python') {
+          dir('./charts/python-http') {
+            sh "jx step changelog --version v\$(cat ../../VERSION)"
 
-          // release the helm chart
-          sh "jx step helm release"
+            // release the helm chart
+            sh "jx step helm release"
 
-          // promote through all 'Auto' promotion Environments
-          sh "jx promote -b --all-auto --timeout 1h --version \$(cat ../../VERSION)"
+            // promote through all 'Auto' promotion Environments
+            sh "jx promote -b --all-auto --timeout 1h --version \$(cat ../../VERSION)"
+          }
         }
       }
     }
