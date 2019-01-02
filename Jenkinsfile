@@ -40,7 +40,7 @@ pipeline {
           // so we can retrieve the version in later steps
           sh "echo \$(jx-release-version) > VERSION"
           sh "jx step git credentials"
-          sh "jx step git envs"
+          sh "git config --global credential.helper cache"
           sh "jx step tag --version \$(cat VERSION)"
           sh "python -m unittest"
           sh "export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml"
